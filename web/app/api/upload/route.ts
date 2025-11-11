@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
           url: file.url,
           size: file.size,
         })),
-        status: 'uploaded',
+        status: 'uploading',
       });
 
       return NextResponse.json({
