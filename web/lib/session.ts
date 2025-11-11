@@ -94,36 +94,27 @@ export async function getSession(id: string): Promise<Session | undefined> {
   // Production: fetch from Blob storage
   console.log('[SESSION] Fetching from Blob storage');
   try {
-    const url = `${process.env.BLOB_READ_WRITE_TOKEN ? 'https://' : ''}${process.env.VERCEL_URL || 'vercel.app'}/api/blob/${id}/session.json`;
-    console.log('[SESSION] Trying primary URL:', url);
-    const response = await fetch(url);
+    // Use head to check if the blob exists and get its URL
+    const blobPath = `sessions/${id}/session.json`;
+    console.log('[SESSION] Checking blob path:', blobPath);
+    
+    const headResult = await head(blobPath);
+    console.log('[SESSION] Blob found, URL:', headResult.url);
+    
+    // Fetch the session data from the blob URL
+    const response = await fetch(headResult.url);
     
     if (!response.ok) {
-      console.log('[SESSION] Primary URL failed, trying alternative');
-      // Try alternative: direct blob URL
-      const blobUrl = `https://blob.vercel-storage.com/sessions/${id}/session.json`;
-      console.log('[SESSION] Trying alternative URL:', blobUrl);
-      const blobResponse = await fetch(blobUrl);
-      
-      if (!blobResponse.ok) {
-        console.error('[SESSION] Alternative URL also failed');
-        return undefined;
-      }
-      
-      const session = await blobResponse.json();
-      console.log('[SESSION] Session found via alternative URL');
-      
-      // Check expiration
-      if (Date.now() > session.expiresAt) {
-        console.error('[SESSION] Session expired');
-        return undefined;
-      }
-      
-      return session;
+      console.error('[SESSION] Failed to fetch session from blob URL');
+      return undefined;
     }
     
     const session = await response.json();
-    console.log('[SESSION] Session found via primary URL');
+    console.log('[SESSION] Session found:', {
+      id: session.id,
+      status: session.status,
+      filesCount: session.files?.length || 0
+    });
     
     // Check expiration
     if (Date.now() > session.expiresAt) {
@@ -134,6 +125,10 @@ export async function getSession(id: string): Promise<Session | undefined> {
     return session;
   } catch (error) {
     console.error('[SESSION] Error fetching session:', error);
+    console.error('[SESSION] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
     console.error('[SESSION] Error stack:', error instanceof Error ? error.stack : 'N/A');
     return undefined;
   }

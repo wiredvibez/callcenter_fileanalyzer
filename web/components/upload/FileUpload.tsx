@@ -81,10 +81,10 @@ export default function FileUpload({ onFilesSelected }: FileUploadProps) {
           </svg>
           <div className="text-center">
             <p className="text-lg font-semibold">
-              Drag and drop CSV files here
+              גרור ושחרר קבצי CSV כאן
             </p>
             <p className="text-sm text-muted-foreground">
-              or click to browse
+              או לחץ לעיון בקבצים
             </p>
           </div>
           <label className="cursor-pointer">
@@ -96,11 +96,11 @@ export default function FileUpload({ onFilesSelected }: FileUploadProps) {
               onChange={handleFileInput}
             />
             <span className="inline-block rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
-              Browse Files
+              עיון בקבצים
             </span>
           </label>
           <p className="text-xs text-muted-foreground">
-            Supports multiple CSV files
+            תומך במספר קבצי CSV
           </p>
         </div>
       </CardContent>

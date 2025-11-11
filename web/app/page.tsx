@@ -28,7 +28,7 @@ export default function HomePage() {
     console.log('[DEBUG] Files to upload:', files.length, files.map(f => f.name));
     
     if (files.length === 0) {
-      setError("Please select at least one CSV file");
+      setError("אנא בחר לפחות קובץ CSV אחד");
       return;
     }
 
@@ -96,7 +96,7 @@ export default function HomePage() {
         if (!sessionResponse.ok) {
           const errorText = await sessionResponse.text();
           console.error('[DEBUG] Session creation failed:', errorText);
-          throw new Error("Session creation failed");
+          throw new Error("יצירת הסשן נכשלה");
         }
 
         const sessionData = await sessionResponse.json();
@@ -117,7 +117,7 @@ export default function HomePage() {
         if (!processResponse.ok) {
           const errorText = await processResponse.text();
           console.error('[DEBUG] Processing failed:', errorText);
-          throw new Error("Processing failed");
+          throw new Error("העיבוד נכשל");
         }
 
         const processData = await processResponse.json();
@@ -149,7 +149,7 @@ export default function HomePage() {
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text();
           console.error('[DEBUG] Upload failed:', errorText);
-          throw new Error("Upload failed");
+          throw new Error("ההעלאה נכשלה");
         }
 
         const uploadData = await uploadResponse.json();
@@ -176,7 +176,7 @@ export default function HomePage() {
           const errorText = await processResponse.text();
           console.error('[DEBUG] Processing failed with status:', processResponse.status);
           console.error('[DEBUG] Error response:', errorText);
-          throw new Error(`Processing failed: ${errorText}`);
+          throw new Error(`העיבוד נכשל: ${errorText}`);
         }
 
         const processData = await processResponse.json();
@@ -192,21 +192,21 @@ export default function HomePage() {
     } catch (err) {
       console.error('[DEBUG] Upload error caught:', err);
       console.error('[DEBUG] Error stack:', err instanceof Error ? err.stack : 'N/A');
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "אירעה שגיאה");
       setUploading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8" dir="rtl">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center space-y-4">
           <h1 className="text-5xl font-bold text-gray-900">
-            Call Center Analytics
+            ניתוח קול סנטר 
           </h1>
           <p className="text-xl text-gray-600">
-            Upload your CSV files to analyze call center interactions
+            העלו קבצי CSV לניתוח אינטראקציות במוקד הטלפוני
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export default function HomePage() {
                 onClick={handleUpload}
                 className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                Process {files.length} file{files.length > 1 ? "s" : ""}
+                עבד {files.length} {files.length > 1 ? "קבצים" : "קובץ"}
               </button>
             </CardContent>
           </Card>
@@ -236,12 +236,12 @@ export default function HomePage() {
         {uploading && (
           <Card>
             <CardHeader>
-              <CardTitle>Processing...</CardTitle>
+              <CardTitle>מעבד...</CardTitle>
             </CardHeader>
             <CardContent>
               <ProgressBar
                 progress={progress}
-                label="Uploading and analyzing your files"
+                label="מעלה ומנתח את הקבצים שלך"
               />
             </CardContent>
           </Card>
@@ -259,15 +259,14 @@ export default function HomePage() {
         {/* Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Requirements</CardTitle>
+            <CardTitle>דרישות</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="list-disc list-inside space-y-2 text-sm">
-              <li>CSV files with call center interaction data</li>
-              <li>Required columns: call_id, call_date, rule_id, rule_parent_id, rule_text, popUpURL</li>
-              <li>Multiple files are supported</li>
-              <li>Your data will be processed and stored securely</li>
-              <li>You'll receive a shareable link to your analytics</li>
+              <li>קבצי CSV עם נתוני אינטראקציות מוקד טלפוני</li>
+              <li>עמודות נדרשות: call_id, call_date, rule_id, rule_parent_id, rule_text, popUpURL</li>
+              <li>ניתן להעלות מספר קבצים</li>
+              <li>הנתונים שלך יעובדו במקום ולא נשמרים לטווח הארוך</li>
             </ul>
           </CardContent>
         </Card>

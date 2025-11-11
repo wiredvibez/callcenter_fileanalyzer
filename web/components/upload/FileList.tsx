@@ -19,7 +19,7 @@ export default function FileList({ files, onRemove }: FileListProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Selected Files ({files.length})</CardTitle>
+        <CardTitle>קבצים שנבחרו ({files.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2">
@@ -37,8 +37,8 @@ export default function FileList({ files, onRemove }: FileListProps) {
               {onRemove && (
                 <button
                   onClick={() => onRemove(index)}
-                  className="ml-2 rounded p-1 hover:bg-red-100 text-red-600"
-                  title="Remove file"
+                  className="mr-2 rounded p-1 hover:bg-red-100 text-red-600"
+                  title="הסר קובץ"
                 >
                   <svg
                     className="w-5 h-5"
