@@ -1,0 +1,7 @@
+# Python dependencies for Call Center Analytics Pipeline
+# Install with: pip install -r requirements.txt
+
+# Core Python libraries (usually included, but listed for completeness)
+# No external packages required - uses only Python standard library
+
+
