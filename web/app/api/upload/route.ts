@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 import { createSession, updateSession } from '../../../lib/session';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -27,7 +29,34 @@ export async function POST(request: NextRequest) {
     // Create session
     const session = createSession();
 
-    // Upload files to Vercel Blob
+    // In development, store files in memory
+    if (isDev) {
+      const uploadedFiles = await Promise.all(
+        files.map(async (file) => {
+          const content = await file.text();
+          // Store in session (memory)
+          return {
+            name: file.name,
+            url: `dev:///${session.id}/${file.name}`,
+            content, // Store content in dev
+            size: file.size,
+          };
+        })
+      );
+
+      // Update session with files
+      updateSession(session.id, {
+        files: uploadedFiles,
+        status: 'uploading',
+      });
+
+      return NextResponse.json({
+        sessionId: session.id,
+        files: uploadedFiles,
+      });
+    }
+
+    // Production: Upload files to Vercel Blob
     const uploadPromises = files.map(async (file) => {
       const pathname = `${session.id}/${file.name}`;
       const blob = await put(pathname, file, {
@@ -57,12 +86,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Upload failed' },
+      { error: 'Upload failed', details: error instanceof Error ? error.message : 'Unknown' },
       { status: 500 }
     );
   }
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const maxDuration = 60;
 

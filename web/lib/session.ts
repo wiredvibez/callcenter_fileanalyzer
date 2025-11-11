@@ -9,9 +9,11 @@ export interface Session {
     name: string;
     url: string;
     size: number;
+    content?: string; // For dev mode
   }>;
   status: 'uploading' | 'processing' | 'completed' | 'error';
   analyticsUrl?: string;
+  analyticsData?: any; // For dev mode
   error?: string;
 }
 

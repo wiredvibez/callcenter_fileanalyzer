@@ -5,6 +5,8 @@ import { buildTree, buildCallPaths } from '../../../lib/analytics/button-tree';
 import { generateAnalytics } from '../../../lib/analytics/analyzer';
 import { put } from '@vercel/blob';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export async function POST(request: NextRequest) {
   try {
     const { sessionId } = await request.json();
@@ -36,9 +38,10 @@ export async function POST(request: NextRequest) {
 
     for (const file of session.files) {
       try {
-        // Fetch CSV from Blob
-        const response = await fetch(file.url);
-        const csvContent = await response.text();
+        // In dev mode, use stored content; in production, fetch from Blob
+        const csvContent = isDev && file.content 
+          ? file.content 
+          : await fetch(file.url).then(r => r.text());
 
         // Parse CSV
         const { nodes, parentMap, childrenMap, callEvents, callMeta } = 
@@ -92,7 +95,20 @@ export async function POST(request: NextRequest) {
       total_calls: allCallEvents.size,
     };
 
-    // Upload main analytics to Blob
+    // In development, store in session memory
+    if (isDev) {
+      updateSession(sessionId, {
+        status: 'completed',
+        analyticsData: analytics,
+      });
+
+      return NextResponse.json({
+        sessionId,
+        status: 'completed',
+      });
+    }
+
+    // Production: Upload main analytics to Blob
     const analyticsBlob = await put(
       `${sessionId}/analytics.json`,
       JSON.stringify(analytics),
