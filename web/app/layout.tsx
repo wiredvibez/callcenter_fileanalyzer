@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Sidebar } from "../components/Sidebar";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Call Analytics Dashboard",
@@ -12,7 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <div className="flex min-h-screen">
-          <Sidebar />
+          <Suspense fallback={<div className="w-64 border-r" />}>
+            <Sidebar />
+          </Suspense>
           <main className="flex-1 p-6">{children}</main>
         </div>
       </body>
