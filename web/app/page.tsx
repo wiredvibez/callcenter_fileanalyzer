@@ -24,6 +24,9 @@ export default function HomePage() {
   };
 
   const handleUpload = async () => {
+    console.log('[DEBUG] Upload started');
+    console.log('[DEBUG] Files to upload:', files.length, files.map(f => f.name));
+    
     if (files.length === 0) {
       setError("Please select at least one CSV file");
       return;
@@ -36,26 +39,34 @@ export default function HomePage() {
     try {
       // Generate a unique session ID for this upload batch
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.log('[DEBUG] Generated session ID:', sessionId);
       
       // Check if we're in production (has BLOB_READ_WRITE_TOKEN)
       const isProduction = typeof window !== 'undefined' && 
         window.location.hostname !== 'localhost';
+      
+      console.log('[DEBUG] Environment:', isProduction ? 'Production' : 'Development');
+      console.log('[DEBUG] Hostname:', typeof window !== 'undefined' ? window.location.hostname : 'N/A');
 
       let uploadedFiles;
 
       if (isProduction) {
+        console.log('[DEBUG] Using production upload (direct to Blob)');
         // Production: Use client-side direct upload to Vercel Blob
         setProgress(5);
         
         // Import the upload function dynamically
         const { upload } = await import('@vercel/blob/client');
+        console.log('[DEBUG] Loaded @vercel/blob/client');
         
         // Upload files directly to Blob storage
         const uploadPromises = files.map(async (file, index) => {
+          console.log(`[DEBUG] Uploading file ${index + 1}/${files.length}: ${file.name}`);
           const blob = await upload(`${sessionId}/${file.name}`, file, {
             access: 'public',
             handleUploadUrl: '/api/upload-token',
           });
+          console.log(`[DEBUG] File ${file.name} uploaded to:`, blob.url);
 
           // Update progress based on file upload completion
           setProgress(10 + (index + 1) * (20 / files.length));
@@ -68,9 +79,11 @@ export default function HomePage() {
         });
 
         uploadedFiles = await Promise.all(uploadPromises);
+        console.log('[DEBUG] All files uploaded:', uploadedFiles);
         setProgress(30);
 
         // Create session with uploaded file metadata
+        console.log('[DEBUG] Creating session with file metadata');
         const sessionResponse = await fetch("/api/upload", {
           method: "POST",
           headers: {
@@ -79,13 +92,19 @@ export default function HomePage() {
           body: JSON.stringify({ files: uploadedFiles }),
         });
 
+        console.log('[DEBUG] Session creation response status:', sessionResponse.status);
         if (!sessionResponse.ok) {
+          const errorText = await sessionResponse.text();
+          console.error('[DEBUG] Session creation failed:', errorText);
           throw new Error("Session creation failed");
         }
 
-        const { sessionId: createdSessionId } = await sessionResponse.json();
+        const sessionData = await sessionResponse.json();
+        console.log('[DEBUG] Session created:', sessionData);
+        const { sessionId: createdSessionId } = sessionData;
         
         // Start processing
+        console.log('[DEBUG] Starting processing for session:', createdSessionId);
         const processResponse = await fetch("/api/process", {
           method: "POST",
           headers: {
@@ -94,37 +113,54 @@ export default function HomePage() {
           body: JSON.stringify({ sessionId: createdSessionId }),
         });
 
+        console.log('[DEBUG] Process response status:', processResponse.status);
         if (!processResponse.ok) {
+          const errorText = await processResponse.text();
+          console.error('[DEBUG] Processing failed:', errorText);
           throw new Error("Processing failed");
         }
 
+        const processData = await processResponse.json();
+        console.log('[DEBUG] Processing completed:', processData);
         setProgress(100);
 
         // Redirect to analytics
+        console.log('[DEBUG] Redirecting to analytics page');
         setTimeout(() => {
           router.push(`/analytics/${createdSessionId}`);
         }, 500);
       } else {
+        console.log('[DEBUG] Using development upload (FormData)');
         // Development: Use FormData upload (for small files in dev)
         const formData = new FormData();
         files.forEach((file) => {
+          console.log('[DEBUG] Adding file to FormData:', file.name, `(${file.size} bytes)`);
           formData.append("files", file);
         });
 
         setProgress(10);
+        console.log('[DEBUG] Uploading files via /api/upload');
         const uploadResponse = await fetch("/api/upload", {
           method: "POST",
           body: formData,
         });
 
+        console.log('[DEBUG] Upload response status:', uploadResponse.status);
         if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text();
+          console.error('[DEBUG] Upload failed:', errorText);
           throw new Error("Upload failed");
         }
 
-        const { sessionId: createdSessionId } = await uploadResponse.json();
+        const uploadData = await uploadResponse.json();
+        console.log('[DEBUG] Upload response:', uploadData);
+        const { sessionId: createdSessionId } = uploadData;
+        console.log('[DEBUG] Created session ID:', createdSessionId);
         setProgress(30);
 
         // Start processing
+        console.log('[DEBUG] Starting processing for session:', createdSessionId);
+        console.log('[DEBUG] Calling POST /api/process with sessionId:', createdSessionId);
         const processResponse = await fetch("/api/process", {
           method: "POST",
           headers: {
@@ -133,19 +169,29 @@ export default function HomePage() {
           body: JSON.stringify({ sessionId: createdSessionId }),
         });
 
+        console.log('[DEBUG] Process response status:', processResponse.status);
+        console.log('[DEBUG] Process response ok:', processResponse.ok);
+        
         if (!processResponse.ok) {
-          throw new Error("Processing failed");
+          const errorText = await processResponse.text();
+          console.error('[DEBUG] Processing failed with status:', processResponse.status);
+          console.error('[DEBUG] Error response:', errorText);
+          throw new Error(`Processing failed: ${errorText}`);
         }
 
+        const processData = await processResponse.json();
+        console.log('[DEBUG] Processing completed:', processData);
         setProgress(100);
 
         // Redirect to analytics
+        console.log('[DEBUG] Redirecting to analytics page:', `/analytics/${createdSessionId}`);
         setTimeout(() => {
           router.push(`/analytics/${createdSessionId}`);
         }, 500);
       }
     } catch (err) {
-      console.error(err);
+      console.error('[DEBUG] Upload error caught:', err);
+      console.error('[DEBUG] Error stack:', err instanceof Error ? err.stack : 'N/A');
       setError(err instanceof Error ? err.message : "An error occurred");
       setUploading(false);
     }

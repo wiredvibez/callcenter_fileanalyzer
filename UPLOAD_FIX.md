@@ -1,10 +1,20 @@
-# Upload Size Limit Fix - Summary
+# Production Deployment Fixes - Summary
 
-## Problem
+## Problems Fixed
+
+### 1. 413 Content Too Large Error
 Getting **413 Content Too Large** error when uploading CSV files on Vercel production environment. This was because Vercel serverless functions have a 4.5MB request body limit.
 
-## Solution
+### 2. 404 Not Found on /api/process
+Getting **404 Not Found** errors when processing files. This was caused by in-memory session storage not working across different serverless function instances.
+
+## Solutions
+
+### Solution 1: Client-Side Direct Uploads
 Implemented **client-side direct uploads** to Vercel Blob Storage, bypassing the serverless function body size limit entirely.
+
+### Solution 2: Persistent Session Storage
+Implemented **blob-based session storage** so sessions persist across different serverless function invocations.
 
 ## Changes Made
 
@@ -43,6 +53,17 @@ Implemented **client-side direct uploads** to Vercel Blob Storage, bypassing the
 - Created dynamic favicon using Next.js metadata API
 - Displays "CA" (Call Analytics) on blue background
 - Fixes 404 favicon errors
+
+### 6. Implemented Persistent Session Storage
+**File:** `web/lib/session.ts`
+- Made `getSession()` and `updateSession()` async
+- Sessions now saved to Vercel Blob in production
+- Still uses in-memory storage for development (faster)
+- Sessions persist across serverless function invocations
+
+**Updated Files:**
+- `web/app/api/upload/route.ts` - Now saves sessions to blob
+- `web/app/api/process/route.ts` - Now fetches sessions from blob
 
 ## How It Works
 

@@ -10,7 +10,7 @@ export async function readJson<T = unknown>(file: string, sessionId?: string): P
       // In development, try to get from session first
       if (process.env.NODE_ENV === 'development') {
         const { getSession } = await import('./session');
-        const session = getSession(sessionId);
+        const session = await getSession(sessionId);
         
         if (session?.analyticsData) {
           // Extract the specific file from analytics data
