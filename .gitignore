@@ -8,9 +8,9 @@ __pycache__/
 dist/
 build/
 
-# Generated data
-analytics/
-json/
+# Generated data (root level only, not web/lib/analytics)
+/analytics/
+/json/
 *.all.json
 
 # Node/Next.js
