@@ -34,44 +34,116 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
+      // Generate a unique session ID for this upload batch
+      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Check if we're in production (has BLOB_READ_WRITE_TOKEN)
+      const isProduction = typeof window !== 'undefined' && 
+        window.location.hostname !== 'localhost';
 
-      // Upload files
-      setProgress(10);
-      const uploadResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      let uploadedFiles;
 
-      if (!uploadResponse.ok) {
-        throw new Error("Upload failed");
+      if (isProduction) {
+        // Production: Use client-side direct upload to Vercel Blob
+        setProgress(5);
+        
+        // Import the upload function dynamically
+        const { upload } = await import('@vercel/blob/client');
+        
+        // Upload files directly to Blob storage
+        const uploadPromises = files.map(async (file, index) => {
+          const blob = await upload(`${sessionId}/${file.name}`, file, {
+            access: 'public',
+            handleUploadUrl: '/api/upload-token',
+          });
+
+          // Update progress based on file upload completion
+          setProgress(10 + (index + 1) * (20 / files.length));
+
+          return {
+            name: file.name,
+            url: blob.url,
+            size: file.size,
+          };
+        });
+
+        uploadedFiles = await Promise.all(uploadPromises);
+        setProgress(30);
+
+        // Create session with uploaded file metadata
+        const sessionResponse = await fetch("/api/upload", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ files: uploadedFiles }),
+        });
+
+        if (!sessionResponse.ok) {
+          throw new Error("Session creation failed");
+        }
+
+        const { sessionId: createdSessionId } = await sessionResponse.json();
+        
+        // Start processing
+        const processResponse = await fetch("/api/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId: createdSessionId }),
+        });
+
+        if (!processResponse.ok) {
+          throw new Error("Processing failed");
+        }
+
+        setProgress(100);
+
+        // Redirect to analytics
+        setTimeout(() => {
+          router.push(`/analytics/${createdSessionId}`);
+        }, 500);
+      } else {
+        // Development: Use FormData upload (for small files in dev)
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append("files", file);
+        });
+
+        setProgress(10);
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Upload failed");
+        }
+
+        const { sessionId: createdSessionId } = await uploadResponse.json();
+        setProgress(30);
+
+        // Start processing
+        const processResponse = await fetch("/api/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId: createdSessionId }),
+        });
+
+        if (!processResponse.ok) {
+          throw new Error("Processing failed");
+        }
+
+        setProgress(100);
+
+        // Redirect to analytics
+        setTimeout(() => {
+          router.push(`/analytics/${createdSessionId}`);
+        }, 500);
       }
-
-      const { sessionId } = await uploadResponse.json();
-      setProgress(30);
-
-      // Start processing
-      const processResponse = await fetch("/api/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sessionId }),
-      });
-
-      if (!processResponse.ok) {
-        throw new Error("Processing failed");
-      }
-
-      setProgress(100);
-
-      // Redirect to analytics
-      setTimeout(() => {
-        router.push(`/analytics/${sessionId}`);
-      }, 500);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : "An error occurred");

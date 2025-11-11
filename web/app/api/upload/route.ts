@@ -6,6 +6,38 @@ const isDev = process.env.NODE_ENV === 'development';
 
 export async function POST(request: NextRequest) {
   try {
+    const contentType = request.headers.get('content-type') || '';
+
+    // Handle JSON body (when files are already uploaded to Blob)
+    if (contentType.includes('application/json')) {
+      const { files } = await request.json();
+
+      if (!files || files.length === 0) {
+        return NextResponse.json(
+          { error: 'No files provided' },
+          { status: 400 }
+        );
+      }
+
+      // Create session with already-uploaded files
+      const session = createSession();
+
+      updateSession(session.id, {
+        files: files.map((file: any) => ({
+          name: file.name,
+          url: file.url,
+          size: file.size,
+        })),
+        status: 'uploaded',
+      });
+
+      return NextResponse.json({
+        sessionId: session.id,
+        files: files,
+      });
+    }
+
+    // Handle FormData (legacy - for dev environment or small files)
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
 
