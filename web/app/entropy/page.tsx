@@ -3,6 +3,8 @@ import { getRuleTextMap } from "../../lib/rules";
 
 type Ent = { entropy_bits: number; perplexity: number; branching_factor: number };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const data = await readJson<Record<string, Ent>>("entropy_complexity.json").catch(() => ({}));
   const rows = Object.entries(data).map(([rid, v]) => ({ rule_id: Number(rid), ...v }));

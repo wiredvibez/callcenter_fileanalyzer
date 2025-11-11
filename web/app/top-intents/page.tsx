@@ -2,6 +2,8 @@ import { readJson } from "../../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import TopIntentsChart from "./top-intents-chart";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const data = await readJson<any[]>("top_intents.json").catch(() => []);
   return (

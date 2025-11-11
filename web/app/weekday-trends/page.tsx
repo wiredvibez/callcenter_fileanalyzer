@@ -2,6 +2,8 @@ import { readJson } from "../../lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import WeekdayChart from "./weekday-chart";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const wd = await readJson<Record<string, number>>("weekday_trends.json").catch(() => ({}));
   return (

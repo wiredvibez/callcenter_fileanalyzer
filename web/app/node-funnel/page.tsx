@@ -1,6 +1,8 @@
 import { readJson } from "../../lib/utils";
 import { getRuleTextMap } from "../../lib/rules";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const data = await readJson<Record<string, { reach: number; transitions: number; drop_off: number }>>(
     "node_funnel.json"

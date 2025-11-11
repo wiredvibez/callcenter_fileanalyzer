@@ -13,6 +13,8 @@ async function getSummary(sessionId?: string) {
 type BranchEntry = { child: number; count: number; text: string };
 type NodeFunnel = { reach: number; transitions: number; drop_off: number };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page({ searchParams }: { searchParams: { session?: string } }) {
   const sessionId = searchParams.session;
   const summary = await getSummary(sessionId);

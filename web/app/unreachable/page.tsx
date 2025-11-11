@@ -1,5 +1,7 @@
 import { readJson } from "../../lib/utils";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const items = await readJson<any[]>("unreachable_nodes.json").catch(() => []);
   return (

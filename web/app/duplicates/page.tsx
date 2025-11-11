@@ -1,6 +1,8 @@
 import { readJson } from "../../lib/utils";
 import { getRuleTextMap } from "../../lib/rules";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const dup = await readJson<Record<string, number[]>>("duplicates_by_text.json").catch(() => ({}));
   const ruleText = await getRuleTextMap();

@@ -3,6 +3,8 @@ import { getRuleTextMap } from "../../lib/rules";
 
 type Cov = { top1_coverage: number; top2_coverage: number };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const data = await readJson<Record<string, Cov>>("coverage_ratio.json").catch(() => ({}));
   const rows = Object.entries(data).map(([rid, v]) => ({ rule_id: Number(rid), ...v }));

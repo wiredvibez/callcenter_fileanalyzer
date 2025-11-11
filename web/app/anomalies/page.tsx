@@ -1,6 +1,8 @@
 import { readJson } from "../../lib/utils";
 import { getRuleTextMap } from "../../lib/rules";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const edges = await readJson<any[]>("anomalies.json").catch(() => []);
   const ruleText = await getRuleTextMap();

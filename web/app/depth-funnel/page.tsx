@@ -1,5 +1,7 @@
 import { readJson } from "../../lib/utils";
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const data = await readJson<Record<string, number>>("depth_funnel.json").catch(() => ({}));
   const rows = Object.entries(data).map(([depth, count]) => ({ depth: Number(depth), count }));

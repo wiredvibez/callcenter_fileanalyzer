@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 type BranchEntry = { child: number; count: number; text: string };
 type NodeFunnel = { reach: number; transitions: number; drop_off: number };
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   // Load the precomputed top-10 branch distribution per node
   const branches = await readJson<Record<string, BranchEntry[]>>("branch_distribution.top10.json").catch(() => ({}));
