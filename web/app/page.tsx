@@ -7,6 +7,7 @@ import FileList from "../components/upload/FileList";
 import ProgressBar from "../components/upload/ProgressBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { saveAnalytics } from "../lib/analytics-storage";
+import { processFilesLocally } from "../lib/client-processor";
 
 export default function HomePage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
 
   const handleFilesSelected = (newFiles: File[]) => {
+    // No size limits for client-side processing!
     setFiles((prev) => [...prev, ...newFiles]);
     setError(null);
   };
@@ -25,8 +27,8 @@ export default function HomePage() {
   };
 
   const handleUpload = async () => {
-    console.log('[UPLOAD] Upload started');
-    console.log('[UPLOAD] Files to upload:', files.length, files.map(f => f.name));
+    console.log('[UPLOAD] Client-side processing started');
+    console.log('[UPLOAD] Files to process:', files.length, files.map(f => f.name));
     
     if (files.length === 0) {
       setError("אנא בחר לפחות קובץ CSV אחד");
@@ -38,44 +40,30 @@ export default function HomePage() {
     setError(null);
 
     try {
-      console.log('[UPLOAD] Creating FormData with files');
-      const formData = new FormData();
-      files.forEach((file) => {
-        console.log('[UPLOAD] Adding file:', file.name, `(${file.size} bytes)`);
-        formData.append("files", file);
-      });
-
-      setProgress(10);
-      console.log('[UPLOAD] Calling combined API: /api/upload-and-process');
+      // Process files entirely in the browser - no server calls!
+      console.log('[UPLOAD] Processing files locally in browser...');
       
-      const response = await fetch("/api/upload-and-process", {
-        method: "POST",
-        body: formData,
+      const analytics = await processFilesLocally(files, (progressInfo) => {
+        // Update progress based on processing stage
+        setProgress(progressInfo.percentage);
+        console.log(`[UPLOAD] ${progressInfo.stage}: ${progressInfo.percentage}%`);
       });
-
-      setProgress(50);
-      console.log('[UPLOAD] Response status:', response.status);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[UPLOAD] Processing failed:', errorData);
-        throw new Error(errorData.error || "העיבוד נכשל");
-      }
-
-      const { analytics, summary } = await response.json();
       console.log('[UPLOAD] Processing completed successfully');
-      console.log('[UPLOAD] Summary:', summary);
-      
-      setProgress(80);
+      console.log('[UPLOAD] Summary:', {
+        files: analytics.files_processed,
+        nodes: analytics.total_nodes,
+        calls: analytics.total_calls,
+      });
 
-      // Store analytics in browser sessionStorage (tab-specific)
+      // Store analytics in browser sessionStorage
       console.log('[UPLOAD] Storing analytics in sessionStorage');
       try {
         saveAnalytics(analytics);
         setProgress(100);
         console.log('[UPLOAD] Analytics saved to sessionStorage');
 
-        // Redirect to summary page (no session ID needed!)
+        // Redirect to summary page
         console.log('[UPLOAD] Redirecting to summary page');
         setTimeout(() => {
           router.push('/summary');
@@ -83,14 +71,14 @@ export default function HomePage() {
       } catch (storageError) {
         // Storage failed - show error and stay on upload page
         console.error('[UPLOAD] Failed to store analytics:', storageError);
-        setError('הנתונים גדולים מדי. אנא נסה להעלות פחות קבצים.');
+        setError('נכשל שמירת הנתונים. הנתונים עשויים להיות גדולים מדי.');
         setUploading(false);
       }
       
     } catch (err) {
       console.error('[UPLOAD] Error:', err);
       console.error('[UPLOAD] Error stack:', err instanceof Error ? err.stack : 'N/A');
-      setError(err instanceof Error ? err.message : "אירעה שגיאה");
+      setError(err instanceof Error ? err.message : "אירעה שגיאה בעיבוד");
       setUploading(false);
     }
   };
@@ -147,10 +135,18 @@ export default function HomePage() {
           </Card>
         )}
 
+        {/* File Size Info */}
+        {files.length > 0 && (
+          <div className="text-center text-xs text-gray-600">
+            סה"כ: {(files.reduce((sum, f) => sum + f.size, 0) / 1024 / 1024).toFixed(2)} MB
+            <span className="text-green-600 mr-2">✓ ללא מגבלה</span>
+          </div>
+        )}
+
         {/* Compact Info */}
         <div className="text-center text-xs text-gray-500 space-y-1">
+          <p>כל העיבוד מתבצע בדפדפן - הקבצים לא מועלים לשרת</p>
           <p>הנתונים נשמרים בטאב הנוכחי בלבד וימחקו בסגירתו</p>
-          <p>עמודות נדרשות: call_id, call_date, rule_id, rule_parent_id, rule_text</p>
         </div>
       </div>
     </div>

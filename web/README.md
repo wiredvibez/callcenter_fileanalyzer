@@ -1,23 +1,25 @@
-# Call Analytics Web - Tab-Local Version
+# Call Analytics Web - Client-Side Processing
 
-React + Next.js dashboard for call center analytics. All data stored in **browser sessionStorage** - tab-local, auto-deleted on close.
+React + Next.js dashboard for call center analytics. **All processing happens in your browser** - files never uploaded, no size limits, complete privacy.
 
 ## How It Works
 
-1. **Upload CSV files** through the web interface
-2. Files are **processed on the server**
-3. **Complete analytics returned** to browser
-4. **Stored in browser sessionStorage** (tab-specific)
+1. **Select CSV files** from your computer
+2. **Browser processes files locally** (no upload!)
+3. **Analytics generated in browser** (no server calls)
+4. **Results stored in browser sessionStorage** (tab-specific)
 5. **Close tab = data deleted** automatically
 
 ## Features
 
+- ✅ **100% client-side** - all processing in browser
+- ✅ **No file uploads** - files never leave your machine
+- ✅ **No size limits** - process files of any size
+- ✅ **Complete privacy** - data stays on your computer
+- ✅ **Zero server costs** - no API calls
+- ✅ **Works offline** - no internet needed after page load
 - ✅ **Tab-local storage** - isolated to current browser tab
 - ✅ **Auto-cleanup** - data deleted when tab closes
-- ✅ **No server storage** - zero server-side state
-- ✅ **Privacy-first** - data never persists
-- ✅ **Fast navigation** - instant access from sessionStorage
-- ✅ **Simple URLs** - no session IDs needed
 
 ## Getting Started
 
@@ -50,26 +52,33 @@ Your CSV files must include these columns:
 ## Architecture
 
 - **App Router** (`/app`) with sidebar layout
+- **Client-side processing** - all CSV parsing and analytics in browser
 - **Browser sessionStorage** - tab-local data storage
-- **Server-side processing** - CSV parsing and analytics generation
 - **Client components** - read from sessionStorage
 - **Client-side charts** - rendered with `recharts`
 - **TailwindCSS** for styling + shadcn UI components
+- **Zero server APIs** - completely static after build
 
-### Data Flow
+### Data Flow (100% Client-Side)
 
 ```
-User uploads CSV 
+User selects CSV files
   ↓
-Server processes (CSV → Analytics)
+Browser reads files locally (File API)
   ↓
-Returns complete analytics JSON
+Browser parses CSV
   ↓
-Client stores in sessionStorage
+Browser generates analytics
+  ↓
+Browser stores in sessionStorage
   ↓
 Analytics pages read from sessionStorage
   ↓
 Close tab → sessionStorage auto-cleared
+
+✓ NO UPLOADS
+✓ NO SERVER CALLS
+✓ FILES STAY LOCAL
 ```
 
 ## Pages
@@ -93,6 +102,13 @@ Close tab → sessionStorage auto-cleared
 
 ## Important Notes
 
+### Complete Privacy
+- ✅ **Files never uploaded** - stay on your computer
+- ✅ **No server processing** - all done in browser
+- ✅ **No data transmission** - nothing sent over network
+- ✅ **Works offline** - no internet needed after page load
+- ✅ **GDPR compliant** - data never leaves your machine
+
 ### Data Lifecycle
 - ✅ **Tab-specific** - Each browser tab has its own data
 - ✅ **Auto-deleted** - Closing tab automatically clears data
@@ -100,16 +116,14 @@ Close tab → sessionStorage auto-cleared
 - ⚠️ **Lost on refresh** - Refreshing page clears data
 - ✅ **Intentional** - Privacy-first design
 
+### No File Size Limits
+- ✅ **Process large files** - 10 MB, 50 MB, 100+ MB
+- ✅ **Multiple files** - no restrictions
+- ✅ **Fast processing** - optimized for performance
+- ✅ **No quotas** - process as much as you want
+
 ### Sidebar Features
 - **Data info panel** - Shows files count and size
 - **Clear button** - Manually delete data
 - **Upload new button** - Start fresh analysis
 - **Navigation** - All analytics pages accessible
-
-### Privacy
-- ✅ No server-side storage
-- ✅ No session IDs
-- ✅ No cloud uploads
-- ✅ Data cleared on tab close
-- ✅ No cross-tab sharing
-- ✅ 100% local operation
