@@ -1,16 +1,38 @@
-import { readJson } from "../../lib/utils";
+'use client';
+
+import { useEffect, useState } from "react";
 import ExplorerClient from "./ExplorerClient";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { getAnalytics } from "../../lib/analytics-storage";
+import NoDataMessage from "../../components/NoDataMessage";
 
 type BranchEntry = { child: number; count: number; text: string };
 type NodeFunnel = { reach: number; transitions: number; drop_off: number };
 
-export const dynamic = 'force-dynamic';
+export default function Page() {
+  const [branches, setBranches] = useState<Record<string, BranchEntry[]>>({});
+  const [nodeFunnel, setNodeFunnel] = useState<Record<string, NodeFunnel>>({});
+  const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
-export default async function Page() {
-  // Load the precomputed top-10 branch distribution per node
-  const branches = await readJson<Record<string, BranchEntry[]>>("branch_distribution.top10.json").catch(() => ({}));
-  const nodeFunnel = await readJson<Record<string, NodeFunnel>>("node_funnel.json").catch(() => ({}));
+  useEffect(() => {
+    const analytics = getAnalytics();
+    if (analytics) {
+      setBranches(analytics.branch_distribution || {});
+      setNodeFunnel(analytics.node_funnel || {});
+      setHasData(true);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">טוען...</div>;
+  }
+
+  if (!hasData) {
+    return <NoDataMessage />;
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Path Explorer</h1>

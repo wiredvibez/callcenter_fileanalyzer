@@ -6,6 +6,7 @@ import FileUpload from "../components/upload/FileUpload";
 import FileList from "../components/upload/FileList";
 import ProgressBar from "../components/upload/ProgressBar";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { saveAnalytics } from "../lib/analytics-storage";
 
 export default function HomePage() {
   const router = useRouter();
@@ -24,8 +25,8 @@ export default function HomePage() {
   };
 
   const handleUpload = async () => {
-    console.log('[DEBUG] Upload started');
-    console.log('[DEBUG] Files to upload:', files.length, files.map(f => f.name));
+    console.log('[UPLOAD] Upload started');
+    console.log('[UPLOAD] Files to upload:', files.length, files.map(f => f.name));
     
     if (files.length === 0) {
       setError("אנא בחר לפחות קובץ CSV אחד");
@@ -37,66 +38,58 @@ export default function HomePage() {
     setError(null);
 
     try {
-      console.log('[DEBUG] Creating FormData with files');
+      console.log('[UPLOAD] Creating FormData with files');
       const formData = new FormData();
       files.forEach((file) => {
-        console.log('[DEBUG] Adding file to FormData:', file.name, `(${file.size} bytes)`);
+        console.log('[UPLOAD] Adding file:', file.name, `(${file.size} bytes)`);
         formData.append("files", file);
       });
 
       setProgress(10);
-      console.log('[DEBUG] Uploading files via /api/upload');
-      const uploadResponse = await fetch("/api/upload", {
+      console.log('[UPLOAD] Calling combined API: /api/upload-and-process');
+      
+      const response = await fetch("/api/upload-and-process", {
         method: "POST",
         body: formData,
       });
 
-      console.log('[DEBUG] Upload response status:', uploadResponse.status);
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text();
-        console.error('[DEBUG] Upload failed:', errorText);
-        throw new Error("ההעלאה נכשלה");
-      }
-
-      const uploadData = await uploadResponse.json();
-      console.log('[DEBUG] Upload response:', uploadData);
-      const { sessionId: createdSessionId } = uploadData;
-      console.log('[DEBUG] Created session ID:', createdSessionId);
-      setProgress(30);
-
-      // Start processing
-      console.log('[DEBUG] Starting processing for session:', createdSessionId);
-      console.log('[DEBUG] Calling POST /api/process with sessionId:', createdSessionId);
-      const processResponse = await fetch("/api/process", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ sessionId: createdSessionId }),
-      });
-
-      console.log('[DEBUG] Process response status:', processResponse.status);
-      console.log('[DEBUG] Process response ok:', processResponse.ok);
+      setProgress(50);
+      console.log('[UPLOAD] Response status:', response.status);
       
-      if (!processResponse.ok) {
-        const errorText = await processResponse.text();
-        console.error('[DEBUG] Processing failed with status:', processResponse.status);
-        console.error('[DEBUG] Error response:', errorText);
-        throw new Error(`העיבוד נכשל: ${errorText}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[UPLOAD] Processing failed:', errorData);
+        throw new Error(errorData.error || "העיבוד נכשל");
       }
 
-      const processData = await processResponse.json();
-      console.log('[DEBUG] Processing completed:', processData);
-      setProgress(100);
+      const { analytics, summary } = await response.json();
+      console.log('[UPLOAD] Processing completed successfully');
+      console.log('[UPLOAD] Summary:', summary);
+      
+      setProgress(80);
 
-      // Redirect to analytics
-      console.log('[DEBUG] Redirecting to analytics page:', `/analytics/${createdSessionId}`);
-      setTimeout(() => {
-        router.push(`/analytics/${createdSessionId}`);
-      }, 500);
+      // Store analytics in browser sessionStorage (tab-specific)
+      console.log('[UPLOAD] Storing analytics in sessionStorage');
+      try {
+        saveAnalytics(analytics);
+        setProgress(100);
+        console.log('[UPLOAD] Analytics saved to sessionStorage');
+
+        // Redirect to summary page (no session ID needed!)
+        console.log('[UPLOAD] Redirecting to summary page');
+        setTimeout(() => {
+          router.push('/summary');
+        }, 500);
+      } catch (storageError) {
+        // Storage failed - show error and stay on upload page
+        console.error('[UPLOAD] Failed to store analytics:', storageError);
+        setError('הנתונים גדולים מדי. אנא נסה להעלות פחות קבצים.');
+        setUploading(false);
+      }
+      
     } catch (err) {
-      console.error('[DEBUG] Upload error caught:', err);
-      console.error('[DEBUG] Error stack:', err instanceof Error ? err.stack : 'N/A');
+      console.error('[UPLOAD] Error:', err);
+      console.error('[UPLOAD] Error stack:', err instanceof Error ? err.stack : 'N/A');
       setError(err instanceof Error ? err.message : "אירעה שגיאה");
       setUploading(false);
     }
@@ -171,7 +164,8 @@ export default function HomePage() {
               <li>קבצי CSV עם נתוני אינטראקציות מוקד טלפוני</li>
               <li>עמודות נדרשות: call_id, call_date, rule_id, rule_parent_id, rule_text, popUpURL</li>
               <li>ניתן להעלות מספר קבצים</li>
-              <li>הנתונים שלך יישארו בזיכרון בזמן ריצה בלבד - אם תרענן את הדף, תצטרך להעלות שוב</li>
+              <li>הנתונים נשמרים בטאב הנוכחי בלבד - סגירת הטאב תמחק אותם אוטומטית</li>
+              <li>לא ניתן לשתף נתונים בין טאבים - כל טאב עצמאי</li>
             </ul>
           </CardContent>
         </Card>

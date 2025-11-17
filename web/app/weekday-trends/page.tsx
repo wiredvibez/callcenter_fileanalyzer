@@ -1,11 +1,33 @@
-import { readJson } from "../../lib/utils";
+'use client';
+
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import WeekdayChart from "./weekday-chart";
+import { getAnalytics } from "../../lib/analytics-storage";
+import NoDataMessage from "../../components/NoDataMessage";
 
-export const dynamic = 'force-dynamic';
+export default function Page() {
+  const [wd, setWd] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
-export default async function Page() {
-  const wd = await readJson<Record<string, number>>("weekday_trends.json").catch(() => ({}));
+  useEffect(() => {
+    const analytics = getAnalytics();
+    if (analytics) {
+      setWd(analytics.weekday_trends || {});
+      setHasData(true);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">טוען...</div>;
+  }
+
+  if (!hasData) {
+    return <NoDataMessage />;
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Weekday Trends</h1>

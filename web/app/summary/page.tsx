@@ -1,28 +1,39 @@
+'use client';
+
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { readJson } from "../../lib/utils";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import SummaryCharts from "./summary-charts";
 import ExplorerClient from "../path-explorer/ExplorerClient";
 import Link from "next/link";
-
-async function getSummary(sessionId?: string) {
-  const summary = await readJson<any>("summary.json", sessionId).catch(() => ({}));
-  return summary || {};
-}
+import { getAnalytics } from "../../lib/analytics-storage";
+import NoDataMessage from "../../components/NoDataMessage";
 
 type BranchEntry = { child: number; count: number; text: string };
 type NodeFunnel = { reach: number; transitions: number; drop_off: number };
 
-export const dynamic = 'force-dynamic';
+export default function Page() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-export default async function Page({ searchParams }: { searchParams: { session?: string } }) {
-  const sessionId = searchParams.session;
-  const summary = await getSummary(sessionId);
-  const lengths = summary.lengths_summary || {};
-  const intents = summary.top_intents_top10 || [];
-  const weekday = summary.weekday_trends || {};
-  const branches = await readJson<Record<string, BranchEntry[]>>("branch_distribution.top10.json", sessionId).catch(() => ({}));
-  const nodeFunnel = await readJson<Record<string, NodeFunnel>>("node_funnel.json", sessionId).catch(() => ({}));
+  useEffect(() => {
+    const analytics = getAnalytics();
+    setData(analytics);
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">טוען...</div>;
+  }
+
+  if (!data) {
+    return <NoDataMessage />;
+  }
+
+  const lengths = data.lengths_summary || {};
+  const intents = data.top_intents_top10 || [];
+  const weekday = data.weekday_trends || {};
+  const branches = data.branch_distribution || {};
+  const nodeFunnel = data.node_funnel || {};
   const totalCalls = lengths.count ?? 0;
   const topIntent = intents[0];
   const topIntentCount = topIntent?.count ?? 0;
@@ -32,13 +43,11 @@ export default async function Page({ searchParams }: { searchParams: { session?:
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Summary</h1>
-        {sessionId && (
-          <div className="flex gap-2">
-            <Link href="/" className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300">
-              Upload New
-            </Link>
-          </div>
-        )}
+        <div className="flex gap-2">
+          <Link href="/" className="rounded bg-gray-200 px-4 py-2 hover:bg-gray-300">
+            Upload New
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

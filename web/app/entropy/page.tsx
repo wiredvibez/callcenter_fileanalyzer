@@ -1,21 +1,48 @@
-import { readJson } from "../../lib/utils";
-import { getRuleTextMap } from "../../lib/rules";
+'use client';
 
-type Ent = { entropy_bits: number; perplexity: number; branching_factor: number };
+import { useEffect, useState } from "react";
+import { getAnalytics } from "../../lib/analytics-storage";
+import NoDataMessage from "../../components/NoDataMessage";
 
-export const dynamic = 'force-dynamic';
+type Ent = { entropy_bits: number; perplexity: number; branching_factor: number; rule_id: number; text?: string };
 
-export default async function Page() {
-  const data = await readJson<Record<string, Ent>>("entropy_complexity.json").catch(() => ({}));
-  const rows = Object.entries(data).map(([rid, v]) => ({ rule_id: Number(rid), ...v }));
-  rows.sort((a, b) => b.entropy_bits - a.entropy_bits);
-  const ruleText = await getRuleTextMap();
-  
-  // Calculate global min/max for consistent color scaling
-  const entropyValues = rows.map((r) => r.entropy_bits);
-  const minEntropy = Math.min(...entropyValues);
-  const maxEntropy = Math.max(...entropyValues);
-  const entropyRange = maxEntropy - minEntropy;
+export default function Page() {
+  const [rows, setRows] = useState<Ent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
+  const [minEntropy, setMinEntropy] = useState(0);
+  const [maxEntropy, setMaxEntropy] = useState(0);
+  const [entropyRange, setEntropyRange] = useState(0);
+
+  useEffect(() => {
+    const analytics = getAnalytics();
+    if (analytics) {
+      const entropyData = analytics.entropy_complexity_top20 || [];
+      // Sort by entropy_bits descending
+      const sortedRows = [...entropyData].sort((a, b) => b.entropy_bits - a.entropy_bits);
+      setRows(sortedRows);
+      
+      // Calculate global min/max for consistent color scaling
+      const entropyValues = sortedRows.map((r) => r.entropy_bits);
+      const min = Math.min(...entropyValues);
+      const max = Math.max(...entropyValues);
+      const range = max - min;
+      setMinEntropy(min);
+      setMaxEntropy(max);
+      setEntropyRange(range);
+      
+      setHasData(true);
+    }
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-[400px]">טוען...</div>;
+  }
+
+  if (!hasData) {
+    return <NoDataMessage />;
+  }
   
   const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
   const entropyBg = (entropyBits: number) => {
@@ -24,6 +51,7 @@ export default async function Page() {
     const hue = Math.round((1 - t) * 120); // 120=green → 0=red
     return `hsl(${hue}, 70%, 85%)`;
   };
+  
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Entropy & Complexity</h1>
@@ -42,7 +70,7 @@ export default async function Page() {
               const bgColor = entropyBg(r.entropy_bits);
               return (
                 <tr key={r.rule_id} className="border-t">
-                  <td className="py-2 pl-4 break-words text-right">{ruleText.get(r.rule_id) ?? String(r.rule_id)}</td>
+                  <td className="py-2 pl-4 break-words text-right">{r.text ?? String(r.rule_id)}</td>
                   <td
                     className="py-2 pl-4 text-center"
                     style={{ backgroundColor: bgColor }}

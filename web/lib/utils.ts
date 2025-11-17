@@ -3,59 +3,11 @@ export function analyticsPath(file: string) {
   return require("path").resolve(process.cwd(), "..", "analytics", file);
 }
 
-export async function readJson<T = unknown>(file: string, sessionId?: string): Promise<T> {
-  // If sessionId provided, fetch from session memory
-  if (sessionId) {
-    try {
-      const { getSession } = await import('./session');
-      const session = getSession(sessionId);
-      
-      if (!session?.analyticsData) {
-        throw new Error(`No analytics data found for session ${sessionId}`);
-      }
-      
-      // Extract the specific file from analytics data
-      const data = session.analyticsData;
-      
-      // Map file names to analytics data properties
-      const fileMap: Record<string, any> = {
-        'summary.json': {
-          lengths_summary: data.lengths_summary,
-          top_intents_top10: data.top_intents_top10,
-          weekday_trends: data.weekday_trends,
-        },
-        'branch_distribution.top10.json': data.branch_distribution,
-        'node_funnel.json': data.node_funnel,
-        'button_tree.all.json': data.button_tree,
-        'entropy_complexity.top20.json': data.entropy_complexity_top20,
-        'dead_ends.top20.json': data.dead_ends_top20,
-        'leaf_frequency.top20.json': data.leaf_frequency_top20,
-        'top_paths.top20.json': data.top_paths_top20,
-        'weekday_trends.json': data.weekday_trends,
-        'top_intents.json': data.top_intents_top10,
-        'anomalies.json': [],
-        'coverage_ratio.json': {},
-        'entropy_complexity.json': {},
-        'dead_ends.json': data.dead_ends_top20 || [],
-        'depth_funnel.json': {},
-        'duplicates_by_text.json': {},
-        'unreachable_nodes.json': [],
-        'url_engagement.json': [],
-        'call_paths.all.json': data.call_paths,
-      };
-      
-      if (fileMap[file] !== undefined) {
-        return fileMap[file] as T;
-      }
-      
-      throw new Error(`File ${file} not found in analytics data`);
-    } catch (error) {
-      console.error(`Error fetching ${file} for session ${sessionId}:`, error);
-      throw error;
-    }
-  }
-  
-  // Otherwise, read from local filesystem (for development with pre-computed analytics)
+/**
+ * Read JSON data from local filesystem (for pre-computed analytics)
+ * This is used when running the Python pipeline mode
+ */
+export async function readJson<T = unknown>(file: string): Promise<T> {
   const fs = await import("node:fs/promises");
   const p = analyticsPath(file);
   const data = await fs.readFile(p, "utf-8");

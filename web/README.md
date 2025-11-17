@@ -1,23 +1,23 @@
-# Call Analytics Web - Local-Only Version
+# Call Analytics Web - Tab-Local Version
 
-React + Next.js dashboard for call center analytics. All processing happens **in-memory** - no cloud storage, no persistence.
+React + Next.js dashboard for call center analytics. All data stored in **browser sessionStorage** - tab-local, auto-deleted on close.
 
 ## How It Works
 
 1. **Upload CSV files** through the web interface
-2. Files are **stored in memory** during the session
-3. **Analytics are generated** and stored in memory
-4. **View results** in the dashboard
-5. **Refresh = restart** - you'll need to re-upload files
+2. Files are **processed on the server**
+3. **Complete analytics returned** to browser
+4. **Stored in browser sessionStorage** (tab-specific)
+5. **Close tab = data deleted** automatically
 
 ## Features
 
-- ✅ In-memory file processing
-- ✅ Real-time analytics generation
-- ✅ Interactive dashboard with multiple views
-- ✅ No data persistence (privacy-first)
-- ✅ No cloud storage costs
-- ✅ 100% local operation
+- ✅ **Tab-local storage** - isolated to current browser tab
+- ✅ **Auto-cleanup** - data deleted when tab closes
+- ✅ **No server storage** - zero server-side state
+- ✅ **Privacy-first** - data never persists
+- ✅ **Fast navigation** - instant access from sessionStorage
+- ✅ **Simple URLs** - no session IDs needed
 
 ## Getting Started
 
@@ -50,10 +50,27 @@ Your CSV files must include these columns:
 ## Architecture
 
 - **App Router** (`/app`) with sidebar layout
-- **In-memory session storage** - data persists only during runtime
+- **Browser sessionStorage** - tab-local data storage
 - **Server-side processing** - CSV parsing and analytics generation
+- **Client components** - read from sessionStorage
 - **Client-side charts** - rendered with `recharts`
 - **TailwindCSS** for styling + shadcn UI components
+
+### Data Flow
+
+```
+User uploads CSV 
+  ↓
+Server processes (CSV → Analytics)
+  ↓
+Returns complete analytics JSON
+  ↓
+Client stores in sessionStorage
+  ↓
+Analytics pages read from sessionStorage
+  ↓
+Close tab → sessionStorage auto-cleared
+```
 
 ## Pages
 
@@ -76,6 +93,23 @@ Your CSV files must include these columns:
 
 ## Important Notes
 
-⚠️ **Data is NOT saved** - If you refresh the page, close the browser, or restart the server, all data will be lost. You'll need to re-upload your CSV files.
+### Data Lifecycle
+- ✅ **Tab-specific** - Each browser tab has its own data
+- ✅ **Auto-deleted** - Closing tab automatically clears data
+- ⚠️ **Not shared** - Can't share between tabs
+- ⚠️ **Lost on refresh** - Refreshing page clears data
+- ✅ **Intentional** - Privacy-first design
 
-✅ This is intentional for privacy and simplicity - no databases, no cloud storage, no persistence layer needed!
+### Sidebar Features
+- **Data info panel** - Shows files count and size
+- **Clear button** - Manually delete data
+- **Upload new button** - Start fresh analysis
+- **Navigation** - All analytics pages accessible
+
+### Privacy
+- ✅ No server-side storage
+- ✅ No session IDs
+- ✅ No cloud uploads
+- ✅ Data cleared on tab close
+- ✅ No cross-tab sharing
+- ✅ 100% local operation
