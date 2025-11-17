@@ -3,9 +3,6 @@ import { getSession, updateSession } from '../../../lib/session';
 import { parseCSV } from '../../../lib/analytics/csv-parser';
 import { buildTree, buildCallPaths } from '../../../lib/analytics/button-tree';
 import { generateAnalytics } from '../../../lib/analytics/analyzer';
-import { put } from '@vercel/blob';
-
-const isDev = process.env.NODE_ENV === 'development';
 
 export async function POST(request: NextRequest) {
   console.log('[API/PROCESS] POST request received');
@@ -23,9 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API/PROCESS] Looking up session:', sessionId);
-    console.log('[API/PROCESS] Environment:', isDev ? 'Development' : 'Production');
     
-    const session = await getSession(sessionId);
+    const session = getSession(sessionId);
     if (!session) {
       console.error('[API/PROCESS] Session not found:', sessionId);
       return NextResponse.json(
@@ -38,12 +34,12 @@ export async function POST(request: NextRequest) {
       id: session.id,
       status: session.status,
       filesCount: session.files.length,
-      files: session.files.map(f => ({ name: f.name, size: f.size, hasUrl: !!f.url, hasContent: !!f.content }))
+      files: session.files.map(f => ({ name: f.name, size: f.size }))
     });
 
     // Update status
     console.log('[API/PROCESS] Updating session status to processing');
-    await updateSession(sessionId, { status: 'processing' });
+    updateSession(sessionId, { status: 'processing' });
 
     // Fetch and process each CSV
     console.log('[API/PROCESS] Starting CSV processing for', session.files.length, 'files');
@@ -56,11 +52,9 @@ export async function POST(request: NextRequest) {
     for (const file of session.files) {
       try {
         console.log(`[API/PROCESS] Processing file: ${file.name}`);
-        // In dev mode, use stored content; in production, fetch from Blob
-        const csvContent = isDev && file.content 
-          ? file.content 
-          : await fetch(file.url).then(r => r.text());
-
+        
+        // Read content from memory
+        const csvContent = file.content;
         console.log(`[API/PROCESS] CSV content length for ${file.name}:`, csvContent.length);
         
         // Parse CSV
@@ -133,75 +127,17 @@ export async function POST(request: NextRequest) {
       total_calls: allCallEvents.size,
     };
 
-    // In development, store in session memory
-    if (isDev) {
-      console.log('[API/PROCESS] Development mode: storing analytics in session');
-      await updateSession(sessionId, {
-        status: 'completed',
-        analyticsData: analytics,
-      });
-
-      console.log('[API/PROCESS] Processing completed successfully');
-      return NextResponse.json({
-        sessionId,
-        status: 'completed',
-      });
-    }
-
-    // Production: Upload main analytics to Blob
-    console.log('[API/PROCESS] Production mode: uploading analytics to Blob storage');
-    const analyticsBlob = await put(
-      `${sessionId}/analytics.json`,
-      JSON.stringify(analytics),
-      {
-        access: 'public',
-        addRandomSuffix: false,
-        contentType: 'application/json',
-      }
-    );
-
-    // Also upload individual analytics files for compatibility
-    await Promise.all([
-      put(`${sessionId}/summary.json`, JSON.stringify({
-        lengths_summary: analyticsData.lengths_summary,
-        top_intents_top10: analyticsData.top_intents_top10,
-        weekday_trends: analyticsData.weekday_trends,
-      }), { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/branch_distribution.top10.json`, JSON.stringify(analyticsData.branch_distribution), 
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/node_funnel.json`, JSON.stringify(analyticsData.node_funnel),
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/button_tree.all.json`, JSON.stringify(buttonTree),
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/entropy_complexity.top20.json`, JSON.stringify(analyticsData.entropy_complexity_top20),
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/dead_ends.top20.json`, JSON.stringify(analyticsData.dead_ends_top20),
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/leaf_frequency.top20.json`, JSON.stringify(analyticsData.leaf_frequency_top20),
-        { access: 'public', addRandomSuffix: false }),
-      
-      put(`${sessionId}/top_paths.top20.json`, JSON.stringify(analyticsData.top_paths_top20),
-        { access: 'public', addRandomSuffix: false }),
-    ]);
-
-    // Update session
-    console.log('[API/PROCESS] Updating session with completed status');
-    await updateSession(sessionId, {
+    // Store analytics in session memory
+    console.log('[API/PROCESS] Storing analytics in session memory');
+    updateSession(sessionId, {
       status: 'completed',
-      analyticsUrl: analyticsBlob.url,
+      analyticsData: analytics,
     });
 
     console.log('[API/PROCESS] Processing completed successfully');
     return NextResponse.json({
       sessionId,
       status: 'completed',
-      analyticsUrl: analyticsBlob.url,
     });
   } catch (error) {
     console.error('[API/PROCESS] Processing error:', error);
@@ -219,4 +155,3 @@ export async function POST(request: NextRequest) {
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
