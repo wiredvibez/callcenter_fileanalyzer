@@ -12,9 +12,7 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // depth_funnel is not in the main analytics, return empty for now
-      // This page may need backend analytics generation update
-      setRows([]);
+      setRows(analytics.depth_funnel || []);
       setHasData(true);
     }
     setLoading(false);

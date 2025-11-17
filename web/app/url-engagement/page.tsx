@@ -12,8 +12,11 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // URL engagement not generated yet - empty for now
-      setItems([]);
+      // Convert from {url, count} to [url, count] tuple format
+      const urlData = (analytics.url_engagement_top20 || []).map(item => 
+        [item.url, item.count] as [string, number]
+      );
+      setItems(urlData);
       setHasData(true);
     }
     setLoading(false);

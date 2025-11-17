@@ -15,8 +15,7 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // Coverage ratio not generated yet - empty for now
-      setRows([]);
+      setRows(analytics.coverage_ratio || []);
       
       // Build rule text map from button tree
       const map = new Map<number, string>();

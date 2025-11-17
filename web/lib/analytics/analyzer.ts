@@ -59,7 +59,7 @@ export function topIntents(paths: PathData[]) {
 }
 
 // Leaf frequency (last node in each path)
-export function leafAnalysis(paths: PathData[]) {
+export function leafAnalysis(paths: PathData[], nodes: Map<number, any>) {
   const leaves = new Map<number, number>();
   
   for (const p of paths) {
@@ -71,7 +71,11 @@ export function leafAnalysis(paths: PathData[]) {
   }
   
   return Array.from(leaves.entries())
-    .map(([rule_id, count]) => ({ rule_id, count }))
+    .map(([rule_id, count]) => ({ 
+      rule_id, 
+      count,
+      text: nodes.get(rule_id)?.text || String(rule_id)
+    }))
     .sort((a, b) => b.count - a.count);
 }
 
@@ -201,7 +205,8 @@ export function topPaths(paths: PathData[], limit: number = 20) {
 // Dead ends
 export function deadEnds(
   nodeFunnelData: Record<number, { reach: number; transitions: number; drop_off: number }>,
-  childrenMap: Map<number, Set<number>>
+  childrenMap: Map<number, Set<number>>,
+  nodes: Map<number, any>
 ) {
   const results: Array<{
     rule_id: number;
@@ -209,6 +214,7 @@ export function deadEnds(
     terminations: number;
     termination_rate: number;
     has_children: boolean;
+    text: string;
   }> = [];
   
   Object.entries(nodeFunnelData).forEach(([ruleIdStr, data]) => {
@@ -222,11 +228,165 @@ export function deadEnds(
         terminations: data.drop_off,
         termination_rate: data.drop_off / data.reach,
         has_children: hasChildren,
+        text: nodes.get(ruleId)?.text || String(ruleId),
       });
     }
   });
   
   return results.sort((a, b) => b.terminations - a.terminations);
+}
+
+// URL engagement (URLs from paths)
+export function urlEngagement(paths: PathData[]) {
+  const urlCounts = new Map<string, number>();
+  
+  for (const p of paths) {
+    for (const step of p.path) {
+      if (step.url) {
+        urlCounts.set(step.url, (urlCounts.get(step.url) || 0) + 1);
+      }
+    }
+  }
+  
+  return Array.from(urlCounts.entries())
+    .map(([url, count]) => ({ url, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+// Depth funnel (how many calls reached each depth level)
+export function depthFunnel(paths: PathData[]) {
+  const depthCounts = new Map<number, number>();
+  
+  for (const p of paths) {
+    const pathLength = p.path.length;
+    for (let depth = 1; depth <= pathLength; depth++) {
+      depthCounts.set(depth, (depthCounts.get(depth) || 0) + 1);
+    }
+  }
+  
+  return Array.from(depthCounts.entries())
+    .map(([depth, count]) => ({ depth, count }))
+    .sort((a, b) => a.depth - b.depth);
+}
+
+// Anomalies (edges observed in paths that don't exist in the tree)
+export function detectAnomalies(paths: PathData[], childrenMap: Map<number, Set<number>>, nodes: Map<number, any>) {
+  // Build set of valid tree edges
+  const treeEdges = new Set<string>();
+  childrenMap.forEach((children, parent) => {
+    children.forEach(child => {
+      treeEdges.add(`${parent}->${child}`);
+    });
+  });
+  
+  // Find edges in paths that aren't in tree
+  const badEdges = new Map<string, { from: number; to: number; count: number; from_text: string; to_text: string }>();
+  
+  for (const p of paths) {
+    const rids = pathRuleIds(p.path);
+    for (let i = 0; i < rids.length - 1; i++) {
+      const from = rids[i];
+      const to = rids[i + 1];
+      const edgeKey = `${from}->${to}`;
+      
+      if (!treeEdges.has(edgeKey)) {
+        if (!badEdges.has(edgeKey)) {
+          badEdges.set(edgeKey, { 
+            from, 
+            to, 
+            count: 0,
+            from_text: nodes.get(from)?.text || String(from),
+            to_text: nodes.get(to)?.text || String(to)
+          });
+        }
+        badEdges.get(edgeKey)!.count++;
+      }
+    }
+  }
+  
+  return Array.from(badEdges.values())
+    .sort((a, b) => b.count - a.count);
+}
+
+// Find duplicate node texts (same text, different IDs)
+export function duplicatesByText(nodes: Map<number, any>) {
+  const textBuckets = new Map<string, number[]>();
+  
+  nodes.forEach((node, ruleId) => {
+    const text = (node.text || '').trim();
+    if (text) {
+      if (!textBuckets.has(text)) {
+        textBuckets.set(text, []);
+      }
+      textBuckets.get(text)!.push(ruleId);
+    }
+  });
+  
+  // Keep only duplicates
+  const duplicates: Array<{ text: string; rule_ids: number[] }> = [];
+  textBuckets.forEach((ids, text) => {
+    if (ids.length > 1) {
+      duplicates.push({ text, rule_ids: ids.sort((a, b) => a - b) });
+    }
+  });
+  
+  return duplicates.sort((a, b) => b.rule_ids.length - a.rule_ids.length);
+}
+
+// Find nodes that never appear in any call path
+export function unreachableNodes(
+  nodes: Map<number, any>,
+  nodeFunnelData: Record<number, { reach: number; transitions: number; drop_off: number }>
+) {
+  const unreachable: Array<{ rule_id: number; text: string }> = [];
+  
+  nodes.forEach((node, ruleId) => {
+    const reach = nodeFunnelData[ruleId]?.reach || 0;
+    if (reach === 0) {
+      unreachable.push({
+        rule_id: ruleId,
+        text: node.text || String(ruleId),
+      });
+    }
+  });
+  
+  return unreachable.sort((a, b) => a.rule_id - b.rule_id);
+}
+
+// Coverage ratio (top-1 and top-2 child coverage for each node)
+export function coverageRatio(branches: Map<number, Map<number, number>>) {
+  const results: Array<{
+    rule_id: number;
+    top1_coverage: number;
+    top2_coverage: number;
+  }> = [];
+  
+  branches.forEach((nextMap, ruleId) => {
+    const total = Array.from(nextMap.values()).reduce((a, b) => a + b, 0);
+    if (total === 0) {
+      results.push({
+        rule_id: ruleId,
+        top1_coverage: 0,
+        top2_coverage: 0,
+      });
+      return;
+    }
+    
+    const sorted = Array.from(nextMap.entries())
+      .map(([childId, count]) => count)
+      .sort((a, b) => b - a);
+    
+    const top1 = sorted[0] || 0;
+    const top2 = top1 + (sorted[1] || 0);
+    
+    results.push({
+      rule_id: ruleId,
+      top1_coverage: top1 / total,
+      top2_coverage: top2 / total,
+    });
+  });
+  
+  return results;
 }
 
 // Complete analytics generation
@@ -237,13 +397,19 @@ export function generateAnalytics(
 ) {
   const lengthsSummary = summarizeLengths(paths);
   const intents = topIntents(paths);
-  const leaves = leafAnalysis(paths);
+  const leaves = leafAnalysis(paths, nodes);
   const branches = branchDistribution(paths);
   const weekdays = weekdayTrends(paths);
   const funnel = nodeFunnel(paths);
   const entropy = entropyComplexity(branches);
   const paths20 = topPaths(paths, 20);
-  const deadEndsData = deadEnds(funnel, childrenMap);
+  const deadEndsData = deadEnds(funnel, childrenMap, nodes);
+  const urlEngagementData = urlEngagement(paths);
+  const depthFunnelData = depthFunnel(paths);
+  const anomaliesData = detectAnomalies(paths, childrenMap, nodes);
+  const duplicatesData = duplicatesByText(nodes);
+  const unreachableData = unreachableNodes(nodes, funnel);
+  const coverageData = coverageRatio(branches);
   
   // Add text to intents
   const intentsWithText = intents.map(item => ({
@@ -280,6 +446,12 @@ export function generateAnalytics(
     entropy_complexity_top20: entropyWithText.slice(0, 20),
     top_paths_top20: paths20,
     dead_ends_top20: deadEndsData.slice(0, 20),
+    url_engagement_top20: urlEngagementData.slice(0, 20),
+    depth_funnel: depthFunnelData,
+    anomalies_top20: anomaliesData.slice(0, 20),
+    duplicates_by_text: duplicatesData,
+    unreachable_nodes: unreachableData,
+    coverage_ratio: coverageData,
   };
 }
 

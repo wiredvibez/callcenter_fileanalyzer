@@ -12,8 +12,11 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // Duplicates not generated yet - empty for now
-      setEntries([]);
+      // Convert from {text, rule_ids} to [text, rule_ids] tuple format
+      const duplicateData = (analytics.duplicates_by_text || []).map(item => 
+        [item.text, item.rule_ids] as [string, number[]]
+      );
+      setEntries(duplicateData);
       setHasData(true);
     }
     setLoading(false);

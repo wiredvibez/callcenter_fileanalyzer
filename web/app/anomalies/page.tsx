@@ -12,8 +12,7 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // Anomalies not generated yet - empty for now
-      setEdges([]);
+      setEdges(analytics.anomalies_top20 || []);
       setHasData(true);
     }
     setLoading(false);
@@ -39,16 +38,22 @@ export default function Page() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left">
-                <th className="py-2 pr-4">From</th>
-                <th className="py-2 pr-4">To</th>
+                <th className="py-2 pr-4">From (ID)</th>
+                <th className="py-2 pr-4">To (ID)</th>
                 <th className="py-2 pr-4">Count</th>
               </tr>
             </thead>
             <tbody>
               {edges.map((e, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="py-2 pr-4 break-words">{String(e.from)}</td>
-                  <td className="py-2 pr-4 break-words">{String(e.to)}</td>
+                  <td className="py-2 pr-4 break-words">
+                    <div className="font-medium">{e.from_text}</div>
+                    <div className="text-xs text-muted-foreground">ID: {e.from}</div>
+                  </td>
+                  <td className="py-2 pr-4 break-words">
+                    <div className="font-medium">{e.to_text}</div>
+                    <div className="text-xs text-muted-foreground">ID: {e.to}</div>
+                  </td>
                   <td className="py-2 pr-4">{e.count}</td>
                 </tr>
               ))}

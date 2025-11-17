@@ -12,8 +12,7 @@ export default function Page() {
   useEffect(() => {
     const analytics = getAnalytics();
     if (analytics) {
-      // Unreachable nodes not generated yet - empty for now
-      setItems([]);
+      setItems(analytics.unreachable_nodes || []);
       setHasData(true);
     }
     setLoading(false);

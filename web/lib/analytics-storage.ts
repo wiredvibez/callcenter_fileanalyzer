@@ -13,6 +13,12 @@ export interface AnalyticsData {
   entropy_complexity_top20: any[];
   top_paths_top20: any[];
   dead_ends_top20: any[];
+  url_engagement_top20: any[];
+  depth_funnel: any[];
+  anomalies_top20: any[];
+  duplicates_by_text: any[];
+  unreachable_nodes: any[];
+  coverage_ratio: any[];
   files_processed: number;
   total_nodes: number;
   total_calls: number;
