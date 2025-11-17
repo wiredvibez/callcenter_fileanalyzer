@@ -97,13 +97,13 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8" dir="rtl">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-5xl font-bold text-gray-900">
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold text-gray-900">
             ניתוח קול סנטר 
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-gray-600">
             העלו קבצי CSV לניתוח אינטראקציות במוקד הטלפוני
           </p>
         </div>
@@ -118,28 +118,21 @@ export default function HomePage() {
 
         {/* Upload Button */}
         {files.length > 0 && !uploading && (
-          <Card>
-            <CardContent className="py-6">
-              <button
-                onClick={handleUpload}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                עבד {files.length} {files.length > 1 ? "קבצים" : "קובץ"}
-              </button>
-            </CardContent>
-          </Card>
+          <button
+            onClick={handleUpload}
+            className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            עבד {files.length} {files.length > 1 ? "קבצים" : "קובץ"}
+          </button>
         )}
 
         {/* Progress */}
         {uploading && (
           <Card>
-            <CardHeader>
-              <CardTitle>מעבד...</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="py-4">
               <ProgressBar
                 progress={progress}
-                label="מעלה ומנתח את הקבצים שלך"
+                label="מעבד..."
               />
             </CardContent>
           </Card>
@@ -147,28 +140,18 @@ export default function HomePage() {
 
         {/* Error */}
         {error && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="py-4">
-              <p className="text-red-600">{error}</p>
+          <Card className="border-red-300 bg-red-50">
+            <CardContent className="py-3">
+              <p className="text-red-700 text-sm">{error}</p>
             </CardContent>
           </Card>
         )}
 
-        {/* Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>דרישות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="list-disc list-inside space-y-2 text-sm">
-              <li>קבצי CSV עם נתוני אינטראקציות מוקד טלפוני</li>
-              <li>עמודות נדרשות: call_id, call_date, rule_id, rule_parent_id, rule_text, popUpURL</li>
-              <li>ניתן להעלות מספר קבצים</li>
-              <li>הנתונים נשמרים בטאב הנוכחי בלבד - סגירת הטאב תמחק אותם אוטומטית</li>
-              <li>לא ניתן לשתף נתונים בין טאבים - כל טאב עצמאי</li>
-            </ul>
-          </CardContent>
-        </Card>
+        {/* Compact Info */}
+        <div className="text-center text-xs text-gray-500 space-y-1">
+          <p>הנתונים נשמרים בטאב הנוכחי בלבד וימחקו בסגירתו</p>
+          <p>עמודות נדרשות: call_id, call_date, rule_id, rule_parent_id, rule_text</p>
+        </div>
       </div>
     </div>
   );
